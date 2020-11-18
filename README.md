@@ -1,4 +1,6 @@
 # Graphene_AI
+
+```bash 
 .
 ├── Data
 │   ├── F148_001.tif
@@ -107,5 +109,6 @@
 │   ├── G079_03deg_002.tif
 │   └── G079_2deg_002.tif
 ├── README.md
-├── package-lock.json
 └── script.py
+
+```
