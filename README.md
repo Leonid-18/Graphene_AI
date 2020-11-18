@@ -105,7 +105,7 @@
 │   ├── G078_2deg_003.tif
 │   ├── G079_03deg_001.tif
 │   ├── G079_03deg_002.tif
-│   ├── G079_2deg_002.tif
-│   └── test.jpg
+│   └── G079_2deg_002.tif
 ├── README.md
+├── package-lock.json
 └── script.py
