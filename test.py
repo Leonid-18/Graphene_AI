@@ -11,6 +11,7 @@ import cv2
 import glob
 from PIL import Image
 from matplotlib import pyplot as plt
+import csv
 
 
 class AnalysePhoto:
@@ -126,50 +127,93 @@ class AnalysePhoto:
             arr.append((i, j - 1))
         return arr
 
-    def __hux__(self, img):
+    def __floodFill__(self, img):
         h, w = img.shape[:2]
         diff = (6, 6, 6)
         mask = np.zeros((h + 2, w + 2), np.uint8)
         nelem = 0
+        waste = 0
         i = 0
         j = 0
         g = 0
+        arr_rect = []
+        area = []
+        all_area = []
         for x in range(1767):
             for y in range(2047):
                 if img[x, y].any() == 0:
+                    if nelem == 0 or nelem % 10 == 0:
+                        i = 50
+                        j = 144
+                        g = 5
+                    if nelem == 1 or nelem % 10 == 1:
+                        i = 230
+                        j = 80
+                        g = 100
+                    if nelem == 2 or nelem % 10 == 2:
+                        i = 78
+                        j = 3
+                        g = 240
+                    if nelem == 3 or nelem % 10 == 3:
+                        i = 3
+                        j = 250
+                        g = 200
+                    if nelem == 4 or nelem % 10 == 4:
+                        i = 170
+                        j = 39
+                        g = 150
+                    if nelem == 5 or nelem % 10 == 5:
+                        i = 100
+                        j = 240
+                        g = 5
+                    if nelem == 6 or nelem % 10 == 6:
+                        i = 32
+                        j = 240
+                        g = 200
+                    if nelem == 7 or nelem % 10 == 7:
+                        i = 176
+                        j = 134
+                        g = 13
+                    if nelem == 8 or nelem % 10 == 8:
+                        i = 45
+                        j = 45
+                        g = 120
+                    if nelem == 9 or nelem % 10 == 9:
+                        i = 3
+                        j = 158
+                        g = 200
                     nelem += 1
-                    i += 1
-                    if 255 < nelem < 510:
-                        g += 1
-                        i = 0
-                    if 510 < nelem < 765:
-                        i = 0
-                        g = 0
-                        j += 1
-                    if nelem == 765:
-                        j = 1
-                    if 765 < nelem < 1020:
-                        g = 0
-                        j += 1
-                    if nelem == 1020:
-                        j = 1
-                    if 1020 < nelem < 1276:
-                        i = 0
-                        g += 1
-                        j += 1
-                    if nelem == 1276:
-                        j = 1
-                        g = 1
-                    if 1276 < nelem < 1530:
-                        g += 1
-                        j += 1
-                    print(i, g, j)
-                    cv2.floodFill(img, mask, (y, x), (g, i, j), diff, diff)
-        print('Element', nelem)
-        print(i, g, i)
-        cv2.imshow('hh', img)
 
-        return img
+                    retval, image, mask, rect = cv2.floodFill(img, mask, (y, x), (g, i, j), diff, diff)
+                    all_area.append(retval)
+                    if retval < 20:  # 0 - x, 1 -y, 2 - length x , 3 - length y
+                        cv2.floodFill(img, None, (y, x), (255, 255, 255), diff, diff)
+                        waste += 1
+                    else:
+                        arr_rect.append(rect)
+                        area.append(retval)  # retval - area (count of pixels)
+        with  open('test.txt', 'a') as f:
+            f.write(str(arr_rect))
+            f.write('\n' + str(area))
+            f.write('\n' + str(len(arr_rect)))
+        print('Element', nelem)
+        print('Waste', waste)
+        print('Number islands', nelem - waste)
+        # print('Area', area)
+        print(i, g, i)
+        # n, bins, patches = plt.hist(x=area, bins='auto', color='#0504aa',
+        #                             alpha=0.7, rwidth=0.85)
+        # plt.grid(axis='y', alpha=0.75)
+        # plt.xlabel('Islands Area, pixels')
+        # plt.ylabel('Quantity')
+        # plt.title('h-BN')
+        # Set a clean upper y-axis limit.
+        # plt.ylim(ymax=960)
+        # plt.xlim(xmax=700, xmin=0)
+        # plt.show()
+        # cv2.imshow('hh', img)
+
+        return img, arr_rect, area, all_area
 
     def kmeans_color_quantization(self, image, clusters=8, rounds=1):
         h, w = image.shape[:2]
@@ -191,6 +235,21 @@ class AnalysePhoto:
         centers = np.uint8(centers)
         res = centers[labels.flatten()]
         return res.reshape((image.shape))
+
+    def __create_csv__(self, arr_rect, area, all_area):
+        with open('analysis.csv', 'w', newline='') as f:
+            thewriter = csv.writer(f)
+            all_island_area = 0
+            thewriter.writerow(['x','y','Area per island','Quantity','All islands area, pixels', 'Line area'])
+            for i in range(len(area)):
+                all_island_area+=area[i]
+            for i in range(len(area)):
+                if i == 0:
+                 thewriter.writerow([arr_rect[i][0],arr_rect[i][1],area[i],len(area),
+                                    all_island_area,2048*1768-all_island_area])
+                else:
+                    thewriter.writerow([arr_rect[i][0],arr_rect[i][1],area[i]])
+
 
 
 image = AnalysePhoto('./Data/G038_002.tif')
@@ -236,26 +295,23 @@ manual_edges_erode_brightness = image.__cannyEdge__(gaussina_brightness_erode, 2
 lines_edges_manual_brightness, dark_photo = image.__HoughLinesP__(image_first, manual_edges_erode_brightness)
 
 # -----Histogram------------------
-primary_image = image.__histogram__(image_first)
+# primary_image = image.__histogram__(image_first)
 # plt.show()
-primary_image_with_cvt = image.__histogram__(addBrightness)
+# primary_image_with_cvt = image.__histogram__(addBrightness)
 # plt.show()
-processed_image = image.__histogram__(lines_edges_manual_brightness)
+# processed_image = image.__histogram__(lines_edges_manual_brightness)
 
 # -----Draw-Contors-----------------
 image2 = AnalysePhoto('HoughLinesP_Black.png')
 image_sec = image2.__resize__(image_first)
 # image2.__find_contors__(image_sec)
 
-# --------Hux-----------------------
-color_island = image2.__hux__(image_sec)
-addBrightness_d = image.__addBrightness__(image_sec)
-gaussian_brightness_d = image.__gaussianBlur__(addBrightness_d)
-gaussina_brightness_erode_d = image.__erode__(gaussian_brightness_d, 3)
-manual_edges_erode_brightness_d = image.__cannyEdge__(gaussina_brightness_erode_d, 200, 300)
+# --------FloodFill-----------------------
+color_island, arr_rect, area, all_area = image2.__floodFill__(image_sec)
 # lines_edges_manual_brightness_d = image.__HoughLinesP__(image_sec, manual_edges_erode_brightness_d)
 # cv2.imshow('err', lines_edges_manual_brightness_d)
-
+# ---------To_CVS_FILE--------------------
+image2.__create_csv__(arr_rect, area, all_area)
 # kmeans = image2.kmeans_color_quantization(image_sec, clusters=3)
 # result = kmeans.copy()
 
@@ -268,9 +324,9 @@ manual_edges_erode_brightness_d = image.__cannyEdge__(gaussina_brightness_erode_
 
 
 # -----Save-image------------------
-primary_image.savefig("Histogram_of_primary_image.png")
-primary_image_with_cvt.savefig("Histogram_of_primary_image_with_cvt.png")
-processed_image.savefig("Histogram_of_processed_image.png")
+# primary_image.savefig("Histogram_of_primary_image.png")
+# primary_image_with_cvt.savefig("Histogram_of_primary_image_with_cvt.png")
+# processed_image.savefig("Histogram_of_processed_image.png")
 Image.fromarray(lines_edges_manual_brightness).save("HoughLinesP_with_Manual_Cany_Erode_Correcting_brightness.png")
 Image.fromarray(dark_photo).save("HoughLinesP_Black.png")
 Image.fromarray(color_island).save("HoughLinesP_Colored.png")
@@ -292,6 +348,3 @@ Image.fromarray(color_island).save("HoughLinesP_Colored.png")
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-
-# image2 = Image.fromarray(image1.__toArray__())
-# print(image2)
